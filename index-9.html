@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src 'self' data:; connect-src https://ldlwpatvexxxhofrnzjk.supabase.co; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="theme-color" content="#073d31">
+<title>SAW Wallet</title>
+<style>
+:root{--green:#073d31;--green2:#0d6b50;--gold:#f3c969;--ink:#172522;--muted:#6c7a75;--bg:#f4f7f5;--line:#e0e9e4;--bad:#b52b2b;--good:#0d7651}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.top{background:linear-gradient(140deg,#062d25,#0d6b50);color:#fff;padding:24px 20px 26px;border-radius:0 0 26px 26px}
+.wrap{max-width:520px;margin:auto;padding:0 16px 40px}
+.brand{display:flex;align-items:center;gap:11px;justify-content:space-between}
+.brand .l{display:flex;align-items:center;gap:11px}
+.mark{width:42px;height:42px;border:2px solid var(--gold);border-radius:13px;display:grid;place-items:center;color:var(--gold);font-size:22px;font-weight:900}
+.brand h1{font-size:23px;letter-spacing:2px;margin:0}
+.brand small{display:block;color:#d5e7df;font-size:11px;letter-spacing:.6px}
+.tag{margin:20px 0 4px;color:#d5e7df;font-size:13px}
+.balance{font-size:34px;font-weight:800;margin:0}
+.sub{color:#d5e7df;font-size:13px;margin-top:4px}
+.demo{display:inline-block;margin-top:12px;border:1px solid #b4d9c9;border-radius:999px;padding:5px 10px;color:#e4fff1;font-size:11px;letter-spacing:.5px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;margin-top:16px;box-shadow:0 5px 18px #173c2d08}
+.panel h2{font-size:17px;margin:0 0 14px}
+.field{margin:11px 0}.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+.field input,.field textarea{width:100%;border:1px solid #d7e1dc;border-radius:11px;padding:13px;font-size:15px;background:#fbfdfc;outline-color:var(--green2);font-family:inherit}
+button{border:0;border-radius:12px;padding:13px 14px;font-weight:750;font-size:14px;cursor:pointer;font-family:inherit}
+button:disabled{opacity:.55;cursor:default}
+.primary{background:var(--green2);color:#fff;width:100%}
+.secondary{background:#eaf3ef;color:var(--green);width:100%}
+.danger{background:#fbeaea;color:var(--bad)}
+.sm{padding:8px 11px;font-size:12px;border-radius:9px}
+.ghost{background:rgba(255,255,255,.14);color:#fff;padding:8px 12px;font-size:12px}
+.tabs{display:flex;gap:8px;margin:16px 0 0}
+.tabs button{flex:1;background:#e7efeb;color:#496058;padding:11px 6px;font-size:13px}
+.tabs button.on{background:var(--green);color:#fff}
+.msg{font-size:13px;margin-top:12px;line-height:1.45;overflow-wrap:anywhere}
+.good{color:var(--good)}.bad{color:var(--bad)}
+.muted{color:var(--muted);font-size:12px;line-height:1.5}
+.hidden{display:none!important}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.acts button{min-height:56px}
+.list{list-style:none;padding:0;margin:0}
+.list li{padding:13px 0;border-bottom:1px solid var(--line);font-size:13px}
+.list li:last-child{border-bottom:0}
+.row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.amt{font-weight:800;white-space:nowrap}
+.plus{color:var(--good)}.minus{color:var(--bad)}
+.pill{display:inline-block;font-size:11px;border-radius:999px;padding:3px 9px;background:#eaf3ef;color:var(--green);font-weight:700}
+.pill.w{background:#fff4d6;color:#77570a}.pill.r{background:#fbeaea;color:var(--bad)}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.code{font-size:30px;letter-spacing:8px;font-weight:900;text-align:center;background:#f0f7f3;border-radius:12px;padding:14px;margin:10px 0}
+.idbox{font-size:11px;word-break:break-all;background:#f0f4f2;border-radius:10px;padding:10px;margin:8px 0;color:#34463f}
+.foot{text-align:center;font-size:11px;color:#74817c;padding:18px 10px 5px;line-height:1.5}
+.ovl{position:fixed;inset:0;background:#0007;display:flex;align-items:flex-end;justify-content:center;z-index:9}
+.sheet{background:#fff;border-radius:22px 22px 0 0;padding:20px 18px 26px;width:100%;max-width:520px;max-height:90vh;overflow:auto}
+.sheet h2{margin:0 0 6px;font-size:18px}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#173c2d;color:#fff;padding:11px 16px;border-radius:12px;font-size:13px;z-index:20;max-width:90%}
+a{color:var(--green2)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+'use strict';
+const SUPABASE_URL='https://ldlwpatvexxxhofrnzjk.supabase.co';
+const SUPABASE_KEY='sb_publishable_4r3G0VhUaJSQnhaztg1w5A__tEe2WSV';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const F=n=>Number(n||0).toLocaleString('fr-FR').replace(/ | /g,' ')+' F';
+const D=t=>{try{return new Date(t).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})}catch(e){return ''}};
+const short=u=>'…'+String(u||'').slice(-6);
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const newRef=()=>(crypto&&crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2));
+
+/* ---------- état ---------- */
+let S={user:null,view:'home',bal:{disponible:0,bloque:0},orders:[],hist:[],lit:[],isAdmin:false,mode:'in',busy:false};
+let OT=null;            // étape code e-mail en cours
+let ORD_REF=null;       // référence de paiement en cours (anti double clic)
+let REC_REF=null;       // référence de recharge en cours
+const lockKey='saw_fail';
+
+/* ---------- blocage après 5 échecs : 10 minutes ---------- */
+function lockLeft(){try{const o=JSON.parse(localStorage.getItem(lockKey)||'null');if(o&&o.n>=5&&Date.now()<o.t+600000)return Math.max(1,Math.ceil((o.t+600000-Date.now())/60000))}catch(e){}return 0}
+function lockFail(){try{const o=JSON.parse(localStorage.getItem(lockKey)||'null')||{n:0,t:0},fresh=Date.now()>o.t+600000;localStorage.setItem(lockKey,JSON.stringify({n:(fresh?0:o.n)+1,t:Date.now()}))}catch(e){}}
+function lockReset(){try{localStorage.removeItem(lockKey)}catch(e){}}
+const lockMsg=()=>{const l=lockLeft();return l?'Trop de tentatives. Réessayez dans '+l+' minute(s).':''};
+
+/* ---------- messages ---------- */
+function toast(t){const e=document.createElement('div');e.className='toast';e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),2600)}
+function say(sel,t,ok){const e=$(sel);if(e)e.innerHTML='<div class="msg '+(ok?'good':'bad')+'">'+esc(t)+'</div>'}
+function nice(e){
+  const m=(e&&e.message)||String(e||'');
+  if(/invalid login/i.test(m))return 'E-mail ou mot de passe incorrect.';
+  if(/rate|too many|second/i.test(m))return 'Trop de demandes. Réessayez dans quelques minutes.';
+  if(/expired|invalid/i.test(m))return 'Code incorrect ou expiré.';
+  if(/password/i.test(m)&&/6|short|weak/i.test(m))return 'Mot de passe trop court (8 caractères minimum).';
+  if(/Failed to fetch|network/i.test(m))return 'Connexion impossible. Vérifiez votre réseau.';
+  return m||'Une erreur est survenue.';
+}
+const rpc=async(f,a)=>{const {data,error}=await sb.rpc(f,a||{});if(error)throw new Error(error.message);return data};
+
+/* ---------- feuille (fenêtre) ---------- */
+function sheet(html){closeSheet();const o=document.createElement('div');o.className='ovl';o.id='ovl';o.innerHTML='<div class="sheet">'+html+'</div>';document.body.appendChild(o)}
+function closeSheet(){const o=$('#ovl');if(o)o.remove()}
+
+/* ---------- données ---------- */
+const STAT={'Bloqué':['En attente de livraison','w'],'Libéré':['Terminé','' ],'Annulé':['Annulé','r'],'Expiré':['Expiré – remboursé','r'],'En litige':['En litige','w'],'Remboursé':['Remboursé','r'],'Libéré après litige':['Terminé (après litige)','']};
+const TYPES={depart_demo:'Solde de départ (démo)',recharge_demo:'Recharge fictive',blocage:'Paiement bloqué',liberation:'Paiement libéré',commission:'Commission SAW',remboursement:'Remboursement'};
+async function load(){
+  try{
+    const [bal,ord,hist]=await Promise.all([
+      rpc('saw_mon_solde'),
+      sb.from('saw_ordres').select('id,acheteur_id,vendeur_id,montant_xof,commission_xof,statut,ref_externe,tentatives,delai_fin,created_at').order('created_at',{ascending:false}).limit(50),
+      sb.from('saw_journal').select('id,poche,montant_xof,type,ordre_id,created_at').order('id',{ascending:false}).limit(60)]);
+    S.bal=bal||{disponible:0,bloque:0};
+    S.orders=(ord&&ord.data)||[];
+    S.hist=(hist&&hist.data)||[];
+    try{S.isAdmin=!!(await rpc('saw_est_admin'))}catch(e){S.isAdmin=false}
+    if(S.isAdmin){const l=await sb.from('saw_litiges').select('id,ordre_id,motif,statut,created_at').eq('statut','Ouvert').order('created_at');S.lit=(l&&l.data)||[]}
+  }catch(e){toast(nice(e))}
+}
+
+/* ---------- affichage ---------- */
+function render(){
+  const app=$('#app');
+  if(!S.user){app.innerHTML=authHtml();return}
+  app.innerHTML=homeHtml();
+}
+function head(extra){return '<div class="top"><div class="wrap" style="padding:0"><div class="brand"><div class="l"><div class="mark">S</div><div><h1>SAW</h1><small>WALLET</small></div></div>'+(extra||'')+'</div>'}
+function authHtml(){
+  return head()+'<p class="tag">Votre portefeuille numérique</p><p class="sub">Connexion sécurisée par un code envoyé à votre e-mail.</p><span class="demo">VERSION DÉMO · ARGENT FICTIF</span></div></div>'+
+  '<div class="wrap"><div class="tabs"><button data-a="mode" data-m="in" class="'+(S.mode==='in'?'on':'')+'">Connexion</button><button data-a="mode" data-m="up" class="'+(S.mode==='up'?'on':'')+'">Inscription</button></div>'+
+  '<div class="panel"><h2>'+(S.mode==='in'?'Se connecter':'Créer un compte')+'</h2>'+
+  '<div class="field"><label>Adresse e-mail</label><input id="em" type="email" autocomplete="email" inputmode="email"></div>'+
+  '<div class="field"><label>Mot de passe'+(S.mode==='up'?' (8 caractères minimum)':'')+'</label><input id="pw" type="password" autocomplete="'+(S.mode==='in'?'current-password':'new-password')+'"></div>'+
+  '<button class="primary" data-a="auth">'+(S.mode==='in'?'Continuer':'Créer mon compte')+'</button><div id="amsg"></div>'+
+  '<p class="muted" style="margin-top:14px">Chaque connexion et chaque inscription demande un code reçu par e-mail. Les montants affichés ici sont fictifs.</p></div>'+
+  '<div class="foot">SAW Wallet · démonstration · aucun vrai argent</div></div>';
+}
+function homeHtml(){
+  const b=S.bal;
+  const tabs=[['home','Accueil'],['orders','Paiements'],['hist','Historique']];
+  if(S.isAdmin)tabs.push(['admin','Admin']);
+  let body='';
+  if(S.view==='home')body=homeBody();
+  else if(S.view==='orders')body=ordersBody();
+  else if(S.view==='hist')body=histBody();
+  else if(S.view==='admin'&&S.isAdmin)body=adminBody();
+  return head('<button class="ghost" data-a="out">Quitter</button>')+
+   '<p class="tag">Solde disponible</p><p class="balance">'+F(b.disponible)+'</p><div class="sub">Bloqué en attente de livraison : <b>'+F(b.bloque)+'</b></div><span class="demo">ARGENT FICTIF · DÉMO</span></div></div>'+
+   '<div class="wrap"><div class="tabs">'+tabs.map(t=>'<button data-a="view" data-v="'+t[0]+'" class="'+(S.view===t[0]?'on':'')+'">'+t[1]+'</button>').join('')+'</div>'+body+
+   '<div class="foot">SAW Wallet · démonstration · aucun vrai argent<br>'+esc(S.user.email||'')+'</div></div>';
+}
+function homeBody(){
+  return '<div class="panel"><h2>Actions</h2><div class="acts"><button class="secondary" data-a="recharge">＋ Recharge fictive</button><button class="primary" data-a="pay">Payer un vendeur</button></div>'+
+   '<button class="secondary" style="margin-top:10px" data-a="refresh">Actualiser</button></div>'+
+   '<div class="panel"><h2>Mon identifiant SAW</h2><p class="muted">Donnez cet identifiant à un acheteur pour qu\'il puisse vous payer.</p><div class="idbox">'+esc(S.user.id)+'</div><button class="secondary sm" data-a="copyid" style="width:auto">Copier mon identifiant</button></div>'+
+   '<div class="panel"><h2>Comment ça marche</h2><p class="muted">1. L\'acheteur paie : l\'argent est <b>bloqué</b> (pas encore chez le vendeur).<br>2. L\'acheteur reçoit un <b>code à 5 chiffres</b> et le donne au vendeur à la livraison.<br>3. Le vendeur saisit le code : l\'argent lui est versé (commission SAW de 1 %).<br>4. Sans livraison au bout de 7 jours, l\'acheteur est remboursé.<br>5. En cas de problème, un litige peut être ouvert.</p></div>';
+}
+function statPill(s){const x=STAT[s]||[s,''];return '<span class="pill '+x[1]+'">'+esc(x[0])+'</span>'}
+function ordersBody(){
+  const me=S.user.id;
+  if(!S.orders.length)return '<div class="panel"><h2>Paiements</h2><p class="muted">Aucun paiement pour le moment.</p><button class="primary" data-a="pay">Payer un vendeur</button></div>';
+  return '<div class="panel"><h2>Mes paiements</h2><ul class="list">'+S.orders.map(o=>{
+    const ach=o.acheteur_id===me,open=o.statut==='Bloqué';
+    let b='';
+    if(open&&ach)b+='<button class="secondary sm" data-a="code" data-id="'+o.id+'">Voir mon code</button>';
+    if(open&&!ach)b+='<button class="primary sm" data-a="deliver" data-id="'+o.id+'">Saisir le code de livraison</button>';
+    if(open)b+='<button class="danger sm" data-a="cancel" data-id="'+o.id+'">Annuler</button><button class="secondary sm" data-a="dispute" data-id="'+o.id+'">Signaler un problème</button>';
+    return '<li><div class="row"><div><b>'+(ach?'Achat':'Vente')+' #'+o.id+'</b> · '+(ach?'vendeur ':'acheteur ')+esc(short(ach?o.vendeur_id:o.acheteur_id))+'<br><span class="muted">'+D(o.created_at)+(o.ref_externe?' · '+esc(o.ref_externe):'')+'</span></div><div class="amt">'+F(o.montant_xof)+'</div></div><div style="margin-top:6px">'+statPill(o.statut)+(open?' <span class="muted">limite : '+D(o.delai_fin)+'</span>':'')+'</div>'+(b?'<div class="btns">'+b+'</div>':'')+'</li>'}).join('')+'</ul></div>';
+}
+function histBody(){
+  if(!S.hist.length)return '<div class="panel"><h2>Historique</h2><p class="muted">Aucune opération.</p></div>';
+  return '<div class="panel"><h2>Historique</h2><ul class="list">'+S.hist.map(h=>{
+    const pos=h.montant_xof>0;
+    return '<li><div class="row"><div>'+esc(TYPES[h.type]||h.type)+'<br><span class="muted">'+D(h.created_at)+' · '+(h.poche==='bloque'?'partie bloquée':'disponible')+(h.ordre_id?' · ordre #'+h.ordre_id:'')+'</span></div><div class="amt '+(pos?'plus':'minus')+'">'+(pos?'+':'−')+F(Math.abs(h.montant_xof))+'</div></div></li>'}).join('')+'</ul></div>';
+}
+function adminBody(){
+  return '<div class="panel"><h2>Litiges à trancher</h2>'+(S.lit.length?'<ul class="list">'+S.lit.map(l=>'<li><b>Ordre #'+l.ordre_id+'</b><br><span class="muted">'+D(l.created_at)+'</span><br>'+esc(l.motif)+'<div class="btns"><button class="secondary sm" data-a="trancher" data-id="'+l.ordre_id+'" data-d="liberer">Payer le vendeur</button><button class="danger sm" data-a="trancher" data-id="'+l.ordre_id+'" data-d="rembourser">Rembourser l\'acheteur</button></div></li>').join('')+'</ul>':'<p class="muted">Aucun litige ouvert.</p>')+'</div>'+
+   '<div class="panel"><h2>Contrôle des comptes</h2><button class="secondary" data-a="equilibre">Lancer le contrôle d\'équilibre</button><div id="eqmsg"></div><button class="secondary" style="margin-top:10px" data-a="expire">Rembourser les ordres dépassés</button></div>';
+}
+
+/* ---------- code e-mail ---------- */
+function codeForm(){
+  sheet('<h2>Code reçu par e-mail</h2><p class="muted">Un code à usage unique a été envoyé à <b>'+esc(OT.em)+'</b>. Vérifiez aussi vos courriers indésirables (spam).</p>'+
+   '<div class="field"><label>Code</label><input id="otc" inputmode="numeric" maxlength="10" autocomplete="one-time-code" style="text-align:center;letter-spacing:6px;font-size:20px"></div><div id="cmsg"></div><br>'+
+   '<button class="primary" data-a="verify">Valider le code</button><div class="btns"><button class="secondary sm" data-a="resend">Renvoyer le code</button><button class="secondary sm" data-a="close">Annuler</button></div>');
+}
+async function sendCode(em,ty){
+  const lk=lockMsg();if(lk)return lk;
+  if(OT&&OT.em===em&&Date.now()-OT.t<60000)return 'Attendez '+Math.ceil((60000-(Date.now()-OT.t))/1000)+' secondes avant de renvoyer le code.';
+  const {error}=ty==='signup'?await sb.auth.resend({type:'signup',email:em}):await sb.auth.signInWithOtp({email:em,options:{shouldCreateUser:false}});
+  if(error){const x=error.message||'';return /signups? not allowed|not found|user.*not/i.test(x)?'Aucun compte avec cet e-mail. Créez un compte.':nice(error)}
+  OT={em,ty,t:Date.now()};return '';
+}
+async function doAuth(){
+  const lk=lockMsg();if(lk)return say('#amsg',lk);
+  const em=($('#em').value||'').trim().toLowerCase(),pw=$('#pw').value||'';
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em))return say('#amsg','Adresse e-mail invalide.');
+  if(S.mode==='up'&&pw.length<8)return say('#amsg','Mot de passe trop court (8 caractères minimum).');
+  if(!pw)return say('#amsg','Saisissez votre mot de passe.');
+  S.busy=true;
+  try{
+    if(S.mode==='in'){
+      const {error}=await sb.auth.signInWithPassword({email:em,password:pw});
+      if(error){lockFail();return say('#amsg',nice(error))}
+      await sb.auth.signOut({scope:'local'});          // la session n'est ouverte qu'après le code
+      const e2=await sendCode(em,'email');if(e2)return say('#amsg',e2);
+      codeForm();
+    }else{
+      lockFail();
+      const {data,error}=await sb.auth.signUp({email:em,password:pw});
+      if(error)return say('#amsg',nice(error));
+      if(data&&data.session){await sb.auth.signOut({scope:'local'});return say('#amsg','Inscription momentanément indisponible.')}
+      if(data&&data.user&&data.user.identities&&data.user.identities.length===0)return say('#amsg','Cette adresse e-mail est déjà utilisée. Connectez-vous.');
+      OT={em,ty:'signup',t:Date.now()};codeForm();
+    }
+  }catch(e){say('#amsg',nice(e))}finally{S.busy=false}
+}
+async function doVerify(){
+  const lk=lockMsg();if(lk)return say('#cmsg',lk);
+  const tok=($('#otc').value||'').replace(/\s/g,'');
+  if(!OT||tok.length<4)return say('#cmsg','Saisissez le code reçu.');
+  const {error}=await sb.auth.verifyOtp({email:OT.em,token:tok,type:OT.ty==='signup'?'signup':'email'});
+  if(error){lockFail();return say('#cmsg',nice(error))}
+  lockReset();OT=null;closeSheet();
+  await start();
+}
+async function start(){
+  const {data}=await sb.auth.getSession();
+  S.user=data&&data.session?data.session.user:null;
+  if(S.user){try{await rpc('saw_creer_compte')}catch(e){toast(nice(e))}await load()}
+  S.view='home';render();
+}
+
+/* ---------- actions argent ---------- */
+function rechargeForm(){
+  REC_REF=newRef();
+  sheet('<h2>Recharge fictive</h2><p class="muted">Argent de démonstration. Entre 100 et 10 000 F par recharge.</p><div class="field"><label>Montant (F CFA)</label><input id="rm" inputmode="numeric" maxlength="6"></div><div id="rmsg"></div><br><button class="primary" id="rgo" data-a="rgo">Recharger</button><div class="btns"><button class="secondary sm" data-a="close">Fermer</button></div>');
+}
+async function doRecharge(){
+  const m=parseInt(($('#rm').value||'').replace(/\D/g,''),10),btn=$('#rgo');
+  if(!m||m<100)return say('#rmsg','Montant minimum : 100 F.');
+  btn.disabled=true;
+  try{await rpc('saw_recharge_demo',{p_ref:REC_REF,p_montant:m});REC_REF=null;closeSheet();await load();render();toast('Compte rechargé.')}
+  catch(e){say('#rmsg',nice(e));btn.disabled=false}
+}
+function payForm(){
+  ORD_REF=newRef();
+  sheet('<h2>Payer un vendeur</h2><p class="muted">L\'argent sera bloqué jusqu\'à la livraison. Vous recevrez un code à donner au vendeur.</p>'+
+   '<div class="field"><label>Identifiant SAW du vendeur</label><input id="pv" autocomplete="off" autocapitalize="off" spellcheck="false"></div>'+
+   '<div class="field"><label>Montant (F CFA)</label><input id="pm" inputmode="numeric" maxlength="7"></div>'+
+   '<div class="field"><label>Référence de la commande (facultatif)</label><input id="pr" maxlength="60"></div><div id="pmsg"></div><br>'+
+   '<button class="primary" id="pgo" data-a="pgo">Payer et bloquer l\'argent</button><div class="btns"><button class="secondary sm" data-a="close">Fermer</button></div>');
+}
+async function doPay(){
+  const v=($('#pv').value||'').trim().toLowerCase(),m=parseInt(($('#pm').value||'').replace(/\D/g,''),10),btn=$('#pgo');
+  if(!UUID.test(v))return say('#pmsg','Identifiant du vendeur invalide.');
+  if(v===S.user.id)return say('#pmsg','Vous ne pouvez pas vous payer vous-même.');
+  if(!m||m<100)return say('#pmsg','Montant minimum : 100 F.');
+  btn.disabled=true;
+  try{
+    const r=await rpc('saw_creer_ordre',{p_ref:ORD_REF,p_vendeur:v,p_montant:m,p_ref_externe:($('#pr').value||'').trim()});
+    ORD_REF=null;await load();render();
+    sheet('<h2>Paiement bloqué ✔</h2><p class="muted">'+F(r.montant)+' sont bloqués. Donnez ce code <b>au vendeur seulement à la livraison</b> :</p><div class="code">'+esc(r.code)+'</div><p class="muted">Vous pouvez le revoir dans « Paiements ». Sans livraison avant le '+D(r.delai_fin)+', vous serez remboursé.</p><button class="primary" data-a="close">J\'ai compris</button>');
+  }catch(e){say('#pmsg',nice(e));btn.disabled=false}
+}
+async function showCode(id){
+  try{const c=await rpc('saw_mon_code',{p_ordre:Number(id)});
+    sheet('<h2>Code de livraison</h2><p class="muted">À donner au vendeur uniquement quand vous avez bien reçu votre commande.</p><div class="code">'+esc(c||'—')+'</div><button class="primary" data-a="close">Fermer</button>')}
+  catch(e){toast(nice(e))}
+}
+function deliverForm(id){
+  sheet('<h2>Confirmer la livraison</h2><p class="muted">Saisissez le code à 5 chiffres donné par l\'acheteur. Après 5 erreurs, l\'ordre est bloqué.</p><div class="field"><input id="dc" inputmode="numeric" maxlength="5" style="text-align:center;letter-spacing:8px;font-size:22px" autocomplete="off"></div><div id="dmsg"></div><br><button class="primary" id="dgo" data-a="dgo" data-id="'+Number(id)+'">Valider</button><div class="btns"><button class="secondary sm" data-a="close">Fermer</button></div>');
+}
+async function doDeliver(id){
+  const c=($('#dc').value||'').trim(),btn=$('#dgo');
+  if(!/^\d{5}$/.test(c))return say('#dmsg','Le code contient 5 chiffres.');
+  btn.disabled=true;
+  try{
+    const r=await rpc('saw_confirmer_livraison',{p_ordre:Number(id),p_code:c});
+    if(r==='ok'){closeSheet();await load();render();toast('Livraison confirmée. Argent reçu.')}
+    else if(r==='bloque'){say('#dmsg','Trop d\'erreurs : cet ordre est bloqué. Contactez l\'acheteur ou ouvrez un litige.');btn.disabled=false;await load()}
+    else{await load();say('#dmsg','Code incorrect.');btn.disabled=false}
+  }catch(e){say('#dmsg',nice(e));btn.disabled=false}
+}
+async function doCancel(id){
+  if(!confirm('Annuler ce paiement ? L\'acheteur sera remboursé.'))return;
+  try{await rpc('saw_annuler_ordre',{p_ordre:Number(id)});await load();render();toast('Paiement annulé, acheteur remboursé.')}catch(e){toast(nice(e))}
+}
+function disputeForm(id){
+  sheet('<h2>Signaler un problème</h2><p class="muted">L\'argent reste bloqué jusqu\'à la décision de SAW. Expliquez le problème.</p><div class="field"><textarea id="lm" rows="4" maxlength="300"></textarea></div><div id="lmsg"></div><br><button class="primary" id="lgo" data-a="lgo" data-id="'+Number(id)+'">Ouvrir le litige</button><div class="btns"><button class="secondary sm" data-a="close">Fermer</button></div>');
+}
+async function doDispute(id){
+  const m=($('#lm').value||'').trim(),btn=$('#lgo');
+  if(m.length<3)return say('#lmsg','Expliquez le problème en quelques mots.');
+  btn.disabled=true;
+  try{await rpc('saw_ouvrir_litige',{p_ordre:Number(id),p_motif:m});closeSheet();await load();render();toast('Litige ouvert.')}
+  catch(e){say('#lmsg',nice(e));btn.disabled=false}
+}
+function trancherForm(id,d){
+  sheet('<h2>'+(d==='liberer'?'Payer le vendeur':'Rembourser l\'acheteur')+'</h2><p class="muted">Ordre #'+Number(id)+'. Le motif est obligatoire et conservé.</p><div class="field"><textarea id="tm" rows="3" maxlength="300"></textarea></div><div id="tmsg"></div><br><button class="primary" id="tgo" data-a="tgo" data-id="'+Number(id)+'" data-d="'+esc(d)+'">Confirmer la décision</button><div class="btns"><button class="secondary sm" data-a="close">Fermer</button></div>');
+}
+async function doTrancher(id,d){
+  const m=($('#tm').value||'').trim(),btn=$('#tgo');
+  if(m.length<3)return say('#tmsg','Indiquez le motif de la décision.');
+  btn.disabled=true;
+  try{await rpc('saw_trancher_litige',{p_ordre:Number(id),p_decision:d,p_motif:m});closeSheet();await load();render();toast('Décision enregistrée.')}
+  catch(e){say('#tmsg',nice(e));btn.disabled=false}
+}
+
+/* ---------- clics ---------- */
+document.addEventListener('click',async ev=>{
+  const t=ev.target.closest('[data-a]');
+  if(!t){if(ev.target.id==='ovl')closeSheet();return}
+  const a=t.dataset.a,id=t.dataset.id;
+  try{
+    if(a==='mode'){S.mode=t.dataset.m;render()}
+    else if(a==='auth')await doAuth();
+    else if(a==='verify')await doVerify();
+    else if(a==='resend'){const e=await sendCode(OT.em,OT.ty);if(e)say('#cmsg',e);else{lockFail();say('#cmsg','Code renvoyé.',1)}}
+    else if(a==='close')closeSheet();
+    else if(a==='view'){S.view=t.dataset.v;render()}
+    else if(a==='out'){await sb.auth.signOut({scope:'local'});S.user=null;S.isAdmin=false;S.orders=[];S.hist=[];S.bal={disponible:0,bloque:0};render()}
+    else if(a==='refresh'){await load();render();toast('Actualisé.')}
+    else if(a==='copyid'){try{await navigator.clipboard.writeText(S.user.id);toast('Identifiant copié.')}catch(e){toast('Copie impossible : sélectionnez-le à la main.')}}
+    else if(a==='recharge')rechargeForm();
+    else if(a==='rgo')await doRecharge();
+    else if(a==='pay')payForm();
+    else if(a==='pgo')await doPay();
+    else if(a==='code')await showCode(id);
+    else if(a==='deliver')deliverForm(id);
+    else if(a==='dgo')await doDeliver(id);
+    else if(a==='cancel')await doCancel(id);
+    else if(a==='dispute')disputeForm(id);
+    else if(a==='lgo')await doDispute(id);
+    else if(a==='trancher')trancherForm(id,t.dataset.d);
+    else if(a==='tgo')await doTrancher(id,t.dataset.d);
+    else if(a==='equilibre'){const r=await rpc('saw_controle_equilibre');const ok=r.total_journal===0&&r.operations_desequilibrees===0&&r.soldes_negatifs===0&&r.bloque_total===r.ordres_en_cours_total;
+      $('#eqmsg').innerHTML='<div class="msg '+(ok?'good':'bad')+'">'+(ok?'✔ Tout est équilibré.':'⚠ Écart détecté !')+'<br>Total du journal : '+esc(r.total_journal)+' · opérations déséquilibrées : '+esc(r.operations_desequilibrees)+' · soldes négatifs : '+esc(r.soldes_negatifs)+'<br>Bloqué : '+F(r.bloque_total)+' / ordres en cours : '+F(r.ordres_en_cours_total)+'</div>'}
+    else if(a==='expire'){const n=await rpc('saw_expirer_ordres');await load();render();toast(n+' ordre(s) remboursé(s).')}
+  }catch(e){toast(nice(e))}
+});
+
+/* ---------- démarrage ---------- */
+start();
+</script>
+</body>
+</html>
