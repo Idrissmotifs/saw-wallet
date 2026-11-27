@@ -46,6 +46,9 @@ button{border:0;cursor:pointer}button:disabled{opacity:.55;cursor:default}
 .row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:7px 0}
 .box{background:#fbfdfc;border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0}
 .empty{text-align:center;color:var(--muted);padding:24px 8px;font-size:14px}
+.lnk{background:none;color:#0b6b52;font-size:11px;text-decoration:underline;padding:8px 10px}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px}.dlg{background:#fff;border-radius:18px;padding:20px;max-width:380px;width:100%}.dlg h3{margin:0 0 6px;font-size:17px}
+.legal h3{font-size:15px;margin:16px 0 4px;color:#073d31}.legal p{font-size:13px;line-height:1.55;margin:4px 0}
 .foot{text-align:center;font-size:11px;color:#74817c;padding:18px 10px 5px;line-height:1.5}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#173c2d;color:#fff;padding:11px 16px;border-radius:12px;font-size:13px;z-index:20;max-width:90%;display:none}
 a{color:var(--pri)}
@@ -105,10 +108,10 @@ const lockMsg=()=>{const l=lockLeft();return l?'Trop de tentatives. Réessayez d
 
 /* ---------- gabarit ---------- */
 function head(extra){return '<div class="top"><div class="wrap" style="padding:0"><div class="brand"><div class="l"><div class="mark">S</div><div><h1>SAW</h1><small>PORTEFEUILLE</small></div></div>'+(extra||'')+'</div>'}
-function shell(inner,logged){
+function shell(inner,logged,gate){
  const tabs=[['orders','📦 Commandes'],['wallet','👛 Portefeuille']];if(S.isAdmin)tabs.push(['admin','🛡️ Admin']);
- $('#app').innerHTML=(logged?head('<button class="ghost" data-a="out">Quitter</button>')+'<p class="tag">Le portefeuille de ZooDo</p><span class="demo">ARGENT FICTIF · DÉMO</span></div></div>':head()+'<p class="tag">Le portefeuille de ZooDo</p><p class="tag" style="margin-top:0">Même compte que ZooDo, code reçu par e-mail.</p><span class="demo">VERSION DÉMO · ARGENT FICTIF</span></div></div>')+
-  '<div class="wrap">'+(logged?'<div class="tabs">'+tabs.map(t=>'<button data-a="view" data-v="'+t[0]+'" class="'+(S.view===t[0]?'on':'')+'">'+t[1]+'</button>').join('')+'</div>':'')+'<div id="main">'+inner+'</div><div class="foot">SAW · démonstration · aucun vrai argent'+(logged?'<br>'+esc(S.user.email||''):'')+'</div></div>';
+ $('#app').innerHTML=(logged?head()+'<p class="tag">Le portefeuille de ZooDo</p><span class="demo">ARGENT FICTIF · DÉMO</span></div></div>':head()+'<p class="tag">Le portefeuille de ZooDo</p><p class="tag" style="margin-top:0">Même compte que ZooDo, code reçu par e-mail.</p><span class="demo">VERSION DÉMO · ARGENT FICTIF</span></div></div>')+
+  '<div class="wrap">'+(logged&&!gate?'<div class="tabs">'+tabs.map(t=>'<button data-a="view" data-v="'+t[0]+'" class="'+(S.view===t[0]?'on':'')+'">'+t[1]+'</button>').join('')+'</div>':'')+'<div id="main">'+inner+'</div><div class="foot">SAW · démonstration · aucun vrai argent'+(logged?'<br>'+esc(S.user.email||''):'')+'<br><button class="lnk" data-a="legal">Confidentialité et règles</button></div></div>';
 }
 function main(h){const m=$('#main');if(m)m.innerHTML=h}
 
@@ -184,7 +187,10 @@ async function start(){
  S.isAdmin=false;S.name='';
  try{S.isAdmin=!!(await rpc('saw_est_admin'))}catch(e){}
  try{const p=await sb.from('profiles').select('nom,boutique').eq('id',S.user.id).maybeSingle();if(p&&p.data)S.name=p.data.nom||p.data.boutique||''}catch(e){}
- S.view='orders';shell('',true);W.orders();
+ const enter=()=>{S.gating=false;S.view='orders';shell('',true);W.orders()};
+ let et=null;try{et=await rpc('saw_etat')}catch(e){}
+ if(et&&et.ouvert){try{await rpc('saw_verrouiller')}catch(e){}S.gating=true;shell('',true,true);W.gate(enter);return}
+ enter();
 }
 function view(v){
  S.view=v;document.querySelectorAll('.tabs [data-a=view]').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
@@ -226,13 +232,43 @@ document.addEventListener('click',async e=>{
   else if(a==='fpsend')await fpSend();
   else if(a==='fpset')await fpSet();
   else if(a==='zoodo')window.open(ZOODO_URL,'_blank','noopener,noreferrer');
-  else if(a==='out'){try{await rpc('saw_verrouiller')}catch(x){}await sb.auth.signOut({scope:'local'});S.user=null;S.isAdmin=false;authScreen()}
+  else if(a==='logout')confirmOut();
+  else if(a==='cfmno')closeCfm();
+  else if(a==='legal')legalScreen();
+  else if(a==='legalback'){if(!S.user)authScreen();else if(S.gating)start();else view(S.view||'orders')}
+  else if(a==='out'){closeCfm();S.gating=false;try{await rpc('saw_verrouiller')}catch(x){}await sb.auth.signOut({scope:'local'});S.user=null;S.isAdmin=false;authScreen()}
   else if(a==='view')view(t.dataset.v);
   else if(a==='trancher')trancherForm(t.dataset.id,t.dataset.d);
   else if(a==='tgo')await trancher(t.dataset.id,t.dataset.d);
   else if(a==='equilibre')await equilibre();
  }catch(x){toast(nice(x))}
 });
+
+
+/* ---------- se déconnecter (avec confirmation) ---------- */
+function closeCfm(){const d=document.getElementById('cfm');if(d)d.remove()}
+function confirmOut(){closeCfm();const d=document.createElement('div');d.id='cfm';d.className='ov';
+ d.innerHTML='<div class="dlg" role="dialog" aria-modal="true"><h3>Se déconnecter de SAW ?</h3><p class="note">Votre portefeuille sera verrouillé. Pour revenir, vous devrez vous reconnecter avec un code reçu par e-mail.</p><div class="acts"><button class="btn alt" data-a="cfmno">Annuler</button><button class="btn" data-a="out">Se déconnecter</button></div></div>';document.body.appendChild(d)}
+
+/* ---------- confidentialité et règles ---------- */
+function legalScreen(){
+ main('<div class="f legal"><h2>🔐 Confidentialité et règles</h2><p class="note">Dernière mise à jour : 27 novembre 2026</p>'
+ +'<h3>1. Qui est responsable</h3><p>SAW est le portefeuille de démonstration de ZooDo. Pour le moment, l\'argent de SAW est <b>fictif</b> : aucun vrai argent n\'est reçu, gardé ni envoyé. Contact : idrissmotifs@gmail.com.</p>'
+ +'<h3>2. Les données que nous gardons</h3><p><b>Compte :</b> votre adresse e-mail (la même que sur ZooDo) et votre nom. Le mot de passe est géré par le service d\'authentification et n\'est jamais lisible par SAW.</p>'
+ +'<p><b>Portefeuille :</b> votre nom, votre numéro de téléphone et votre code PIN, gardé uniquement sous forme chiffrée qui ne permet pas de le retrouver.</p>'
+ +'<p><b>Commandes et opérations :</b> montants, états, dates, code de livraison, historique. L\'adresse de livraison et les téléphones d\'une commande sont effacés 7 jours après la fin de la commande.</p>'
+ +'<p><b>Vérification d\'identité (facultative) :</b> nom complet, date de naissance, pays, type de pièce et fin de son numéro, photo de la pièce et selfie. Ces documents sont gardés en privé.</p>'
+ +'<p><b>Notifications :</b> si vous les activez, l\'adresse technique de votre téléphone nécessaire pour vous les envoyer.</p>'
+ +'<h3>3. Pourquoi nous les utilisons</h3><p>Pour faire fonctionner vos commandes et vos paiements fictifs, verrouiller et protéger votre portefeuille, vérifier votre identité si vous le demandez, traiter les litiges, vous envoyer vos notifications et empêcher la fraude.</p>'
+ +'<h3>4. Qui peut voir quoi</h3><p>Nous ne vendons pas vos données et nous ne faisons pas de publicité ciblée. L\'autre personne d\'une commande voit ce qui est nécessaire à la livraison. Les administrateurs de ZooDo voient les informations utiles pour trancher un litige ou vérifier une identité. Les données sont hébergées chez notre prestataire technique (Supabase). Elles peuvent être transmises aux autorités si la loi l\'exige.</p>'
+ +'<h3>5. Protection</h3><p>Le portefeuille se verrouille tout seul après quelques minutes. Après 5 erreurs de PIN, il se bloque quelques minutes. Chaque paiement, annulation et retrait demandent votre PIN. Les pièces d\'identité ne sont accessibles qu\'aux personnes autorisées.</p>'
+ +'<h3>6. Sur votre téléphone</h3><p>SAW garde sur votre appareil votre connexion, un compteur de tentatives et une copie pour fonctionner hors connexion. SAW n\'utilise aucun cookie publicitaire.</p>'
+ +'<h3>7. Vos droits</h3><p>Vous pouvez demander l\'accès à vos données, leur correction ou leur suppression en écrivant à idrissmotifs@gmail.com. Les opérations déjà effectuées peuvent être conservées dans l\'historique pour le suivi des litiges et la sécurité.</p>'
+ +'<h3>8. Règles d\'utilisation</h3><p>Un compte appartient à une seule personne. Sont interdits : la fraude, l\'usurpation d\'identité, le piratage ou toute tentative de contourner les limites et la sécurité, les fausses informations et l\'usage abusif du service. En cas de manquement, ZooDo peut geler les opérations ou suspendre le compte. Les conditions du portefeuille (commandes, commission, litiges, plafonds) se trouvent dans l\'onglet Portefeuille, rubrique Sécurité.</p>'
+ +'<h3>9. Changements</h3><p>Ces règles évolueront avant l\'arrivée de l\'argent réel. La date de mise à jour est indiquée en haut et vous serez invité à accepter les nouvelles conditions du portefeuille.</p>'
+ +'<div class="acts"><button class="btn" data-a="legalback">Retour</button></div></div>');
+ window.scrollTo(0,0);
+}
 
 /* ===== module portefeuille (identique à celui de ZooDo) ===== */
 const WHOST={sb,esc,sheet:h=>{if(h)main(h);else W.orders()},close:()=>{view('orders')},toast,user:()=>S.user,login:()=>authScreen(),after:()=>{},name:()=>S.name||''};
@@ -249,7 +285,7 @@ const W=(H=>{
  const pinF=(id,label)=>'<label>'+label+'</label><input id="'+id+'" class="wpin" type="password" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="••••">';
  const wrap=(h,back)=>H.sheet('<div class="f wl">'+h+'</div>');
  const loading=t=>wrap('<h2>👛 '+(t||'Portefeuille')+'</h2><p class="note">Chargement…</p>');
- const fail=(e,back)=>wrap('<h2>👛 Portefeuille</h2><div class="msg err">'+esc(err(e))+'</div><div class="acts"><button class="btn alt" data-w="close">Fermer</button></div>');
+ const fail=(e,back)=>locked(e)?pinScreen():wrap('<h2>👛 Portefeuille</h2><div class="msg err">'+esc(err(e))+'</div><div class="acts"><button class="btn alt" data-w="close">Fermer</button></div>');
  let S={from:'home'};
  const locked=e=>/verrouill/i.test((e&&e.message)||'');
  const STAT={'Demandée':['📝','Demande envoyée · en attente du vendeur'],'À payer':['💳','Acceptée par le vendeur · à payer'],'Non payé':['⌛','Non payée à temps · annulée'],'En attente':['⏳','En attente d\'acceptation'],'Bloqué':['✅','Payée · conservée jusqu\'à la livraison'],'Libéré':['💚','Livrée · vendeur payé'],'Refusé':['✖','Refusée par le vendeur'],'Annulé':['✖','Annulée'],'Non accepté':['⌛','Non acceptée à temps'],'Expiré':['⌛','Non livrée à temps · remboursée'],'En litige':['⚖️','Litige en cours'],'Remboursé':['↩️','Remboursée après litige'],'Libéré après litige':['💚','Payée après litige']};
@@ -276,9 +312,9 @@ const W=(H=>{
   try{await rpc('saw_ouvrir_portefeuille',{p_nom:val('wn'),p_tel:val('wt'),p_pin:p1});H.toast('Portefeuille ouvert. Bienvenue !');const n=S.next;S.next=null;if(n)return n();return home()}
   catch(e){say(err(e));if(b)b.disabled=false}
  }
- function pinScreen(next,title){
+ function pinScreen(next,title,gate){
   S.next=next||null;
-  wrap('<h2>🔒 '+(title||'Portefeuille verrouillé')+'</h2><p class="note">Entrez votre code PIN à 4 chiffres.</p>'+pinF('wp','Code PIN')+'<div id="wmsg"></div><br><button class="btn" data-w="unlock">Déverrouiller</button><div class="acts"><button class="btn alt sm" data-w="forgot">PIN oublié ?</button><button class="btn alt" data-w="close">Fermer</button></div>');
+  wrap('<h2>🔒 '+(title||'Portefeuille verrouillé')+'</h2><p class="note">Entrez votre code PIN à 4 chiffres.</p>'+pinF('wp','Code PIN')+'<div id="wmsg"></div><br><button class="btn" data-w="unlock">Déverrouiller</button><div class="acts"><button class="btn alt sm" data-w="forgot">PIN oublié ?</button>'+(gate?'<button class="btn alt" data-a="logout">Se déconnecter</button>':'<button class="btn alt" data-w="close">Fermer</button>')+'</div>');
   setTimeout(()=>{const e=document.getElementById('wp');if(e)e.focus()},50);
  }
  async function unlock(){
@@ -311,8 +347,8 @@ const W=(H=>{
   if(!h.length)return '<div class="empty">Aucune opération.</div>';
   return h.map(x=>{const m=Number(x.montant_xof),pos=m>0;return '<div class="row wh"><span>'+esc(x.libelle||typeTxt[x.type]||x.type)+'<small class="sub"> · '+esc(dt(x.created_at))+(x.poche==='bloque'?' · conservé jusqu\'à la livraison':'')+'</small></span><b class="'+(pos?'wpos':'wneg')+'">'+(pos?'+':'−')+fmt(Math.abs(m))+'</b></div>'}).join('');
  }
- function secHtml(){
-  return kycBox()+limBox()+'<div class="box"><b>Code PIN</b><p class="note">Vous pouvez changer votre PIN à tout moment.</p><div class="acts"><button class="btn alt sm" data-w="chpin">Changer mon PIN</button><button class="btn alt sm" data-w="forgot">PIN oublié</button><button class="btn alt sm" data-w="lock">🔒 Verrouiller maintenant</button></div></div><div class="box"><b>Notifications téléphone</b><p class="note">Recevez une alerte sur ce téléphone quand une commande ou un paiement change.</p><div class="acts"><button class="btn alt sm" data-w="push">🔔 Activer sur ce téléphone</button></div></div>'
+function secHtml(){
+  return '<div class="box"><b>Compte</b><p class="note">'+esc((H.user()||{}).email||'')+'</p><div class="acts"><button class="btn alt sm" data-a="logout">Se déconnecter</button><button class="btn alt sm" data-a="legal">Confidentialité et règles</button></div></div>'+kycBox()+limBox()+'<div class="box"><b>Code PIN</b><p class="note">Vous pouvez changer votre PIN à tout moment.</p><div class="acts"><button class="btn alt sm" data-w="chpin">Changer mon PIN</button><button class="btn alt sm" data-w="forgot">PIN oublié</button><button class="btn alt sm" data-w="lock">🔒 Verrouiller maintenant</button></div></div><div class="box"><b>Notifications téléphone</b><p class="note">Recevez une alerte sur ce téléphone quand une commande ou un paiement change.</p><div class="acts"><button class="btn alt sm" data-w="push">🔔 Activer sur ce téléphone</button></div></div>'
    +'<p class="note">Le portefeuille se verrouille tout seul après quelques minutes. Chaque paiement, chaque annulation et chaque retrait demandent votre PIN.</p>';
  }
 
@@ -701,7 +737,7 @@ const W=(H=>{
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&H.user()){rpc('saw_verrouiller').catch(()=>{})}});
  document.head.insertAdjacentHTML('beforeend','<style>.wtiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px}.wtiles button{border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:16px;padding:10px;text-align:left;display:grid;gap:2px;font:inherit}.wtiles span{font-size:12px;font-weight:700}.wtiles b{font-size:17px;font-variant-numeric:tabular-nums}.wtiles small{font-size:10.5px;opacity:.75}.wtabs{overflow-x:auto}.wtabs button{flex:0 0 auto!important;white-space:nowrap;padding-left:12px!important;padding-right:12px!important}.wtl{display:flex;gap:3px;margin:6px 0;flex-wrap:wrap}.wtl span{font-size:10.5px;padding:3px 7px;border-radius:999px;background:var(--soft);color:var(--mute)}.wtl .dn{background:var(--pri);color:var(--onpri,#fff);opacity:.6}.wtl .on{background:var(--pri);color:var(--onpri,#fff);font-weight:800}.wdet{border-top:1px dashed var(--line);margin-top:6px;padding-top:4px;font-size:13px}.wdet .row{padding:3px 0}</style>');
  document.addEventListener('change',e=>{if(e.target&&e.target.id==='wzs')recap()});
- return {open,orders,pay,home,sponsPay};
+ return {open,orders,pay,home,sponsPay,gate:cb=>pinScreen(cb,'Entrez votre code PIN',true)};
 })(WHOST);
 
 
